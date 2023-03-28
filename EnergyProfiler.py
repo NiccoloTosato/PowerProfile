@@ -101,7 +101,7 @@ class Profiler:
         for zone in self.powerzones:
             power=np.diff(zone.data/(1e6*self.dt))
             name=zone.name
-            if name in timdedict:
+            if name in timedict:
                 name+=f"_{i}"
                 i+=1
             timedict[name]=TimeSeries(power,dx=self.dt,unit="Watts",name=zone.name)
