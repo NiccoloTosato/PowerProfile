@@ -2,6 +2,7 @@ import numpy as np
 import time
 from gwpy.timeseries import TimeSeries,TimeSeriesDict
 import h5py
+import os
 
 class PowerZone:
 
@@ -51,6 +52,15 @@ class PowerZone:
     def reset(self):
         self.counter=0
     
+    @staticmethod
+    def autodetect(interface='intel-rapl'):
+        powerzones=list()
+        if interface == 'intel-rapl':
+            for path in os.listdir("/sys/class/powercap"):
+                if path != "intel-rapl" and path.find("mmio")==-1:
+                    powerzones.append(PowerZone(f"/sys/class/powercap/{path}"))
+                    
+        return powerzones
         
         
         
