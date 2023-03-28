@@ -14,14 +14,21 @@ parser.add_argument('--dt', dest='timestep',metavar='dt',action='store',
                     default=0.1, type=float,
                     help='Profiler time step in Seconds [S]')
 
+parser.add_argument('--auto', dest='autodetect',action='store_true', 
+                    help='Autodetect the powerzones exposed with intel-rapl interfaxe')
+
 args = parser.parse_args()
 
 print("Start profiling")
-
-powerzones=[PowerZone("/sys/class/powercap/intel-rapl:0:0"),
+if args.autodetect:
+    powerzones=PowerZone.autodetect()
+else:
+    powerzones=[PowerZone("/sys/class/powercap/intel-rapl:0:0"),
             PowerZone("/sys/class/powercap/intel-rapl:1:0"),
             PowerZone("/sys/class/powercap/intel-rapl:0"),
             PowerZone("/sys/class/powercap/intel-rapl:1")]
+
+print(powerzones)
 
 profiler=Profiler(powerzones,time=args.time,dt=args.timestep)
 print(profiler)
