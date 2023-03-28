@@ -55,21 +55,22 @@ class PowerZone:
         
         
 class Profiler:
-    def __init__(self,powerzones,time,dt):
-        self.powerzones=powerzones
-        self.time=time
-        #How many samples I will read for each PowerZone
-        self.sample=int(time/dt)
-        self.dt=dt
-        #Timestep in nS
-        self.dtns=dt*1e9
-        #How many time the process sleep between each cicle, higher the value, more precise is the measure
-        self.sleeptime=dt/10
-        #allocate one array for each zone
-        for zone in self.powerzones:
-            zone.allocate(self.sample)
-        self.time_dict=None
-        
+    def __init__(self,powerzones=None,time=None,dt=None):
+        if (powerzones is not None) and (time is not None): 
+            self.powerzones=powerzones
+            self.time=time
+            #How many samples I will read for each PowerZone
+            self.sample=int(time/dt)
+            self.dt=dt
+            #Timestep in nS
+            self.dtns=dt*1e9
+            #How many time the process sleep between each cicle, higher the value, more precise is the measure
+            self.sleeptime=dt/10
+            #allocate one array for each zone
+            for zone in self.powerzones:
+                zone.allocate(self.sample)
+            self.time_dict=None
+
     def start(self):
         self.reset()
         last_time=time.time_ns()
@@ -96,9 +97,11 @@ class Profiler:
     
     def to_timedict(self):
         timedict=TimeSeriesDict()
+        i=0
         for zone in self.powerzones:
             power=np.diff(zone.data/(1e6*self.dt))
-            timedict[zone.name]=TimeSeries(power,dx=self.dt,unit="Watts")
+            timedict[zone.name+"-"+str(i)]=TimeSeries(power,dx=self.dt,unit="Watts",name=zone.name)
+            i+=1
         return timedict
     
     def load_profile(self,filename):
