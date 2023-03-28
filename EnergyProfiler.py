@@ -100,8 +100,12 @@ class Profiler:
         i=0
         for zone in self.powerzones:
             power=np.diff(zone.data/(1e6*self.dt))
-            timedict[zone.name+"-"+str(i)]=TimeSeries(power,dx=self.dt,unit="Watts",name=zone.name)
-            i+=1
+            name=zone.name
+            if name in timdedict:
+                name+=f"_{i}"
+                i+=1
+            timedict[name]=TimeSeries(power,dx=self.dt,unit="Watts",name=zone.name)
+            
         return timedict
     
     def load_profile(self,filename):
