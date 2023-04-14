@@ -6,8 +6,9 @@ import os
 
 class PowerZone:
 
-    def __init__(self,path):
+    def __init__(self,path,interface):
         self.path=path
+        self.interface=interface
         try:
             self.open_file()
             self.read_name()
@@ -17,15 +18,23 @@ class PowerZone:
     
     def open_file(self):
         try:
-            self.descriptor=open(f"{self.path}/energy_uj",'r')
+            if self.interface=='intel-rapl':
+                self.descriptor=open(f"{self.path}/energy_uj",'r')
+            elif self.interface=='amd_energy':
+                self.descriptor=open(f"{self.path}_input",'r')
         except Exception as e:
             print(f"Errore apertura file {e}")
              
     def read_name(self):
         try:
-            file=open(f"{self.path}/name",'r')
-            self.name=file.readline().splitlines()[0]
-            file.close()
+            if self.interface=='intel-rapl': 
+                file=open(f"{self.path}/name",'r')
+                self.name=file.readline().splitlines()[0]
+                file.close()
+            elif self.interface=='amd_energy':
+                file=open(f"{self.path}_label",'r')
+                self.name=file.readline().splitlines()[0]
+                file.close()
         except Exception as e:
             print(f"Errore apertura file {e}")
             raise
@@ -58,8 +67,12 @@ class PowerZone:
         if interface == 'intel-rapl':
             for path in os.listdir("/sys/class/powercap"):
                 if path != "intel-rapl" and path.find("mmio")==-1:
-                    powerzones.append(PowerZone(f"/sys/class/powercap/{path}"))
-                    
+                    powerzones.append(PowerZone(f"/sys/class/powercap/{path}",interface='intel-rapl'))
+        elif interface == 'amd_energy':
+            for path in os.listdir("/sys/class/hwmon/hwmon2"):
+                if path.find("label")>1:
+                    trim=path.find("_")
+                    powerzones.append(PowerZone(f"/sys/class/hwmon/hwmon2/{path[:trim]}",interface='amd_energy'))
         return powerzones
         
         

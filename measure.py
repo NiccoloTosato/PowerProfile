@@ -21,12 +21,12 @@ args = parser.parse_args()
 
 print("Start profiling")
 if args.autodetect:
-    powerzones=PowerZone.autodetect()
+    powerzones=PowerZone.autodetect("amd_energy")
 else:
-    powerzones=[PowerZone("/sys/class/powercap/intel-rapl:0:0"),
-            PowerZone("/sys/class/powercap/intel-rapl:1:0"),
-            PowerZone("/sys/class/powercap/intel-rapl:0"),
-            PowerZone("/sys/class/powercap/intel-rapl:1")]
+    powerzones=[PowerZone("/sys/class/powercap/intel-rapl:0:0","intel-rapl"),
+            PowerZone("/sys/class/powercap/intel-rapl:1:0","intel-rapl"),
+            PowerZone("/sys/class/powercap/intel-rapl:0","intel-rapl"),
+            PowerZone("/sys/class/powercap/intel-rapl:1","intel-rapl")]
 
 print(powerzones)
 
