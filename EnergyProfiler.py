@@ -60,7 +60,7 @@ class PowerZone:
     
     def reset(self):
         self.counter=0
-    
+        
     @staticmethod
     def autodetect(interface='intel-rapl'):
         powerzones=list()
@@ -74,9 +74,7 @@ class PowerZone:
                     trim=path.find("_")
                     powerzones.append(PowerZone(f"/sys/class/hwmon/hwmon2/{path[:trim]}",interface='amd_energy'))
         return powerzones
-        
-        
-        
+                
 class Profiler:
     def __init__(self,powerzones=None,time=None,dt=None):
         if (powerzones is not None) and (time is not None): 
@@ -163,3 +161,7 @@ class Profiler:
             except Exception as e:
                 print("Qualcosa di strano")
                 print(e)
+
+
+         
+    
