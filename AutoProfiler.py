@@ -1,6 +1,5 @@
 import numpy as np
 import time
-from gwpy.timeseries import TimeSeries,TimeSeriesDict
 import h5py
 import os
 from subprocess import Popen, PIPE
