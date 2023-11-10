@@ -27,10 +27,10 @@ print("Start profiling")
 if args.autodetect:
     powerzones=AutoPowerZone.autodetect()
 else:
-    powerzones=[PowerZone("/sys/class/powercap/intel-rapl:0:0","intel-rapl"),
-            PowerZone("/sys/class/powercap/intel-rapl:1:0","intel-rapl"),
-            PowerZone("/sys/class/powercap/intel-rapl:0","intel-rapl"),
-            PowerZone("/sys/class/powercap/intel-rapl:1","intel-rapl")]
+    powerzones=[AutoPowerZone("/sys/class/powercap/intel-rapl:0:0","intel-rapl"),
+            AutoPowerZone("/sys/class/powercap/intel-rapl:1:0","intel-rapl"),
+            AutoPowerZone("/sys/class/powercap/intel-rapl:0","intel-rapl"),
+            AutoPowerZone("/sys/class/powercap/intel-rapl:1","intel-rapl")]
 
 profiler=AutoProfiler(powerzones,command=args.command,args=args.args,dt=args.timestep,filename=args.filename)
 profiler.start()
