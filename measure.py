@@ -1,4 +1,4 @@
-from EnergyProfiler import PowerZone,Profiler
+from AutoProfiler import AutoProfiler,AutoPowerZone
 import argparse
 
 parser = argparse.ArgumentParser(description='Start the profiler')
@@ -6,9 +6,13 @@ parser.add_argument('--file', dest='filename',metavar='Filename',action='store',
                     default="default.hdf5",
                     help='Output file name, HDF5 format')
 
-parser.add_argument('--time', dest='time',metavar='ProfileTime',action='store',
-                    default=10, type=float,
-                    help='Profiler run time in Seconds [S]')
+parser.add_argument('--command', dest='command',metavar='Command',action='store',
+                    default="sleep",
+                    help='Exacutable to profile')
+
+parser.add_argument('--args', dest='args',metavar='Args',action='store',
+                    default="",
+                    help='Exacutable args')
 
 parser.add_argument('--dt', dest='timestep',metavar='dt',action='store', 
                     default=0.1, type=float,
@@ -21,16 +25,13 @@ args = parser.parse_args()
 
 print("Start profiling")
 if args.autodetect:
-    powerzones=PowerZone.autodetect("amd_energy")
+    powerzones=AutoPowerZone.autodetect()
 else:
     powerzones=[PowerZone("/sys/class/powercap/intel-rapl:0:0","intel-rapl"),
             PowerZone("/sys/class/powercap/intel-rapl:1:0","intel-rapl"),
             PowerZone("/sys/class/powercap/intel-rapl:0","intel-rapl"),
             PowerZone("/sys/class/powercap/intel-rapl:1","intel-rapl")]
 
-print(powerzones)
-
-profiler=Profiler(powerzones,time=args.time,dt=args.timestep)
-print(profiler)
+profiler=AutoProfiler(powerzones,command=args.command,args=args.args,dt=args.timestep,filename=args.filename)
 profiler.start()
-profiler.save(args.filename)
+profiler.plot_profile()
