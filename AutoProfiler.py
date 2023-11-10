@@ -104,7 +104,7 @@ class AutoProfiler:
     def start(self):
         #lanciamo un altro programma ! poi profiliamo fintanto che sto coso gira, poi ci fermiamo.
         self.reset()
-        process=Popen([self.command, self.args], stdout=PIPE, stderr=PIPE)
+        process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
         init_time=last_time=time.time_ns()
         while process.poll() is None:
             while (time.time_ns()-last_time < self.dtns):
@@ -114,7 +114,8 @@ class AutoProfiler:
         #qui ho finito di profilare
         #self.time_dict=self.to_timedict()
         print("Command output:")
-        print(process.stdout.read())
+        print(process.stdout.read().decode())
+        print(process.stderr.read().decode())
         self.save(filename=self.filename)
         print(f"Profiling time: {round((last_time-init_time)/(10**9),2)} [s]")
         print("End profiling")
@@ -157,7 +158,7 @@ class AutoProfiler:
                     for zone_dataset in f[zone_group].keys():
                         dataset=f[zone_group][zone_dataset]
                         x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
-                        plt.plot(x_axis,dataset[:],label=f"{zone_group}/{zone_dataset}")
+                        plt.plot(x_axis,dataset[:],label=f"{zone_group}/{zone_dataset}",lw=1)
                 plt.legend()
                 plt.ylabel ("Power [W]")
                 plt.xlabel("Time [s]")
