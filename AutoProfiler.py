@@ -106,6 +106,7 @@ class AutoProfiler:
         self.reset()
         process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
         init_time=last_time=time.time_ns()
+        t0=time.time()
         while process.poll() is None:
             while (time.time_ns()-last_time < self.dtns):
                 time.sleep(self.sleeptime)
@@ -114,9 +115,17 @@ class AutoProfiler:
         #qui ho finito di profilare
         #self.time_dict=self.to_timedict()
         print("Command output:")
-        print(process.stdout.read().decode())
-        print(process.stderr.read().decode())
-        self.save(filename=self.filename)
+        stdoutput=process.stdout.read().decode()
+        events=list()
+        for line in stdoutput.splitlines():
+            if ("Start" in line) or ("End" in line):
+                name_event,time_event=line.split(":")
+                events.append((name_event,float(time_event)-t0))
+        print(events)
+        stderr=process.stderr.read().decode()
+        print(stdoutput)
+        print(stderr)
+        self.save(events=events,filename=self.filename)
         print(f"Profiling time: {round((last_time-init_time)/(10**9),2)} [s]")
         print("End profiling")
 
@@ -134,21 +143,17 @@ class AutoProfiler:
             s+=f"\t{zone.name}\n"
         return s   
         
-    def save(self,filename="default.hdf5"):
+    def save(self,filename="default.hdf5",events=None):
         with h5py.File(filename, 'w') as f:
             for zone in self.powerzones:
                 data=np.array(zone.data)
                 dset = f.create_dataset(f"{zone.name}", data=np.diff(data/(1e6*self.dt)))
-                dset.attrs['dt'] = self.dt        
-        #timedict=TimeSeriesDict()
-        #i=0
-        #for zone in self.powerzones:
-            #power=np.diff(zone.data/(1e6*self.dt))
-        #    name=zone.name
-        #    if name in timedict:
-        #        name+=f"_{i}"
-        #        i+=1
-        #    timedict[name]=TimeSeries(power,dx=self.dt,unit="Watts",name=zone.name)
+                dset.attrs['dt'] = self.dt
+            if events is not None:
+                g=f.create_group("events")
+                for name_event,time_event in events:
+                    g.attrs[name_event]=time_event
+
     def plot_profile(self,filename=None):
         if self.filename is not None:
             self.profiles=dict()
@@ -159,6 +164,10 @@ class AutoProfiler:
                         dataset=f[zone_group][zone_dataset]
                         x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
                         plt.plot(x_axis,dataset[:],label=f"{zone_group}/{zone_dataset}",lw=1)
+                for name_event,time_event in f["events"].attrs.items():
+                    plt.axvline(x=time_event,color='r')
+                    plt.text(time_event, 13, name_event,rotation=90,verticalalignment='center')
+
                 plt.legend()
                 plt.ylabel ("Power [W]")
                 plt.xlabel("Time [s]")
