@@ -74,7 +74,7 @@ class AutoPowerZone:
             for path in os.listdir("/sys/class/hwmon/hwmon2"):
                 if path.find("label")>1:
                     trim=path.find("_")
-                    powerzones.append(PowerZone(f"/sys/class/hwmon/hwmon2/{path[:trim]}",interface='amd_energy'))
+                    powerzones.append(AutoPowerZone(f"/sys/class/hwmon/hwmon2/{path[:trim]}",interface='amd_energy'))
         return powerzones
 
 class AutoProfiler:
@@ -136,7 +136,7 @@ class AutoProfiler:
     def reset(self):
         for zone in self.powerzones:
             zone.reset()
-            
+
     def __repr__(self):
         s=f"Profiler command: {self.command}, args {self.args}, dt {self.dt} [s]\nZones:\n"
         for zone in self.powerzones:
@@ -166,7 +166,7 @@ class AutoProfiler:
                         plt.plot(x_axis,dataset[:],label=f"{zone_group}/{zone_dataset}",lw=1)
                 for name_event,time_event in f["events"].attrs.items():
                     plt.axvline(x=time_event,color='r')
-                    plt.text(time_event, 13, name_event,rotation=90,verticalalignment='center')
+                    plt.text(time_event, 40, name_event,rotation=90,verticalalignment='center')
 
                 plt.legend()
                 plt.ylabel ("Power [W]")

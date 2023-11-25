@@ -21,11 +21,14 @@ parser.add_argument('--dt', dest='timestep',metavar='dt',action='store',
 parser.add_argument('--auto', dest='autodetect',action='store_true', 
                     help='Autodetect the powerzones exposed with intel-rapl interfaxe')
 
+parser.add_argument('--interface', dest='interface',action='store', 
+                    help='Select power interface: amd_energy, intel-rapl')
+
 args = parser.parse_args()
 
 print("Start profiling")
 if args.autodetect:
-    powerzones=AutoPowerZone.autodetect()
+    powerzones=AutoPowerZone.autodetect(args.interface)
 else:
     powerzones=[AutoPowerZone("/sys/class/powercap/intel-rapl:0:0","intel-rapl"),
             AutoPowerZone("/sys/class/powercap/intel-rapl:1:0","intel-rapl"),
