@@ -114,15 +114,20 @@ class AutoProfiler:
             last_time=time.time_ns()
         #qui ho finito di profilare
         #self.time_dict=self.to_timedict()
-        print("Command output:")
+
         stdoutput=process.stdout.read().decode()
         events=list()
         for line in stdoutput.splitlines():
             if ("Start" in line) or ("End" in line):
                 name_event,time_event=line.split(":")
                 events.append((name_event,float(time_event)-t0))
-        print(events)
+        if len(events)>0:
+            print(events)
+        else:
+            print("No events recorded")
+            events=None
         stderr=process.stderr.read().decode()
+        print("Command output:")
         print(stdoutput)
         print(stderr)
         self.save(events=events,filename=self.filename)
@@ -164,9 +169,10 @@ class AutoProfiler:
                         dataset=f[zone_group][zone_dataset]
                         x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
                         plt.plot(x_axis,dataset[:],label=f"{zone_group}/{zone_dataset}",lw=1)
-                for name_event,time_event in f["events"].attrs.items():
-                    plt.axvline(x=time_event,color='r')
-                    plt.text(time_event, 40, name_event,rotation=90,verticalalignment='center')
+                if "events" in f:
+                    for name_event,time_event in f["events"].attrs.items():
+                        plt.axvline(x=time_event,color='r')
+                        plt.text(time_event, 40, name_event,rotation=90,verticalalignment='center')
 
                 plt.legend()
                 plt.ylabel ("Power [W]")
