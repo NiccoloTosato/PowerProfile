@@ -38,7 +38,7 @@ class AutoPowerZone:
                 file.close()
             elif self.interface=='amd_energy':
                 file=open(f"{self.path}_label",'r')
-                self.name=file.readline().splitlines()[0]
+                self.name="/amd_energy/"+file.readline().splitlines()[0]
                 file.close()
         except Exception as e:
             print(f"Errore apertura/lettura file {e}")
@@ -168,7 +168,11 @@ class AutoProfiler:
                     for zone_dataset in f[zone_group].keys():
                         dataset=f[zone_group][zone_dataset]
                         x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
-                        plt.plot(x_axis,dataset[:],label=f"{zone_group}/{zone_dataset}",lw=1)
+                        y_axis=dataset[:]
+                        if np.mean(y_axis)> 0.1:
+                            plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
+                        else:
+                            plt.plot(x_axis,y_axis,lw=1)
                 if "events" in f:
                     for name_event,time_event in f["events"].attrs.items():
                         plt.axvline(x=time_event,color='r')
