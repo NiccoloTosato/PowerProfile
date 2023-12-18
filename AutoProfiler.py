@@ -5,6 +5,63 @@ import os
 from subprocess import Popen, PIPE
 import matplotlib.pyplot as plt
 
+class AutoFrequency:
+    def __init__(self,path):
+        self.path=path
+        try:
+            self.open_file()
+            self.read_name()
+        except:
+            print(f"Errore apertura file {path}")        
+            pass
+        self.allocate()
+        
+    @staticmethod
+    def autodetect():
+        frequencyzones=list()
+        #please remove os.listdir and use import glob; listing = glob.glob('C:/foo/bar/foo.log*')
+        for path in os.listdir("/sys/devices/system/cpu/cpufreq/"):
+            if 'policy' in path:
+                frequencyzones.append(AutoFrequency(f"/sys/devices/system/cpu/cpufreq/{path}"))
+        return frequencyzones
+
+    def open_file(self):
+        try:
+            self.descriptor=open(f"{self.path}/scaling_cur_freq",'r')
+        except Exception as e:
+            print("QUI")
+            print(f"Errore apertura fileeee {self.path}/scaling_cur_freq ")
+
+    def read_name(self):
+        try:
+            file=open(f"{self.path}/affected_cpus",'r')
+            self.name="cpu0"+file.readline()
+            file.close()
+        except Exception as e:
+            print(f"Errore apertura/lettura file {e}")
+            raise
+
+    def __repr__(self):
+        s=f"{self.name}\t{self.read_frequency()} freq"
+        return s
+    
+    def allocate(self):
+        self.data=list()
+        return
+    
+    def store_read(self):
+        self.data.append(self.read_frequency())
+        return
+
+    def reset(self):
+        self.allocate()
+
+    def read_frequency(self):
+        value=int(self.descriptor.readline())
+        self.descriptor.seek(0)
+        return value
+        
+    
 class AutoPowerZone:
     def __init__(self,path,interface):
         self.path=path
@@ -92,35 +149,38 @@ class AutoProfiler:
                     print(zone)
             else:
                 print("No powerzones detected")
+            #Try to discover frequecy
+            self.frequencyzones=AutoFrequency.autodetect()
+            if len(self.frequencyzones) > 0:
+                for zone in self.frequencyzones:
+                    print(zone)                
             self.command=command
             self.args=args
             #How many time the process sleep between each cicle, higher the value, more precise is the measure
-            self.sleeptime=dt/10
+            self.sleeptime=dt/20
             self.time_dict=None
             print(f"Profiler command: {self.command}, args {self.args}, dt {self.dt}")
 
 
-                
     def start(self):
         #lanciamo un altro programma ! poi profiliamo fintanto che sto coso gira, poi ci fermiamo.
         self.reset()
+        t0=time.time_ns()
         process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
         init_time=last_time=time.time_ns()
-        t0=time.time()
         while process.poll() is None:
-            while (time.time_ns()-last_time < self.dtns):
-                time.sleep(self.sleeptime)
             self.cycle()
             last_time=time.time_ns()
+            while (time.time_ns()-last_time < self.dtns):
+                time.sleep(self.sleeptime)
         #qui ho finito di profilare
-        #self.time_dict=self.to_timedict()
-
         stdoutput=process.stdout.read().decode()
         events=list()
+        print( time.get_clock_info("time"))
         for line in stdoutput.splitlines():
             if ("Start" in line) or ("End" in line):
                 name_event,time_event=line.split(":")
-                events.append((name_event,float(time_event)-t0))
+                events.append((name_event,float(time_event)-t0/(10**(9))))
         if len(events)>0:
             print(events)
         else:
@@ -137,7 +197,9 @@ class AutoProfiler:
     def cycle(self):
         for zone in self.powerzones:
             zone.store_read()
-            
+        for freq in self.frequencyzones:
+            freq.store_read()
+        
     def reset(self):
         for zone in self.powerzones:
             zone.reset()
@@ -158,21 +220,28 @@ class AutoProfiler:
                 g=f.create_group("events")
                 for name_event,time_event in events:
                     g.attrs[name_event]=time_event
+            for zone in self.frequencyzones:
+                data=np.array(zone.data)
+                dset = f.create_dataset(f"/frequency/{zone.name}", data=data/(1e6))
+                dset.attrs['dt'] = self.dt
 
     def plot_profile(self,filename=None):
         if self.filename is not None:
             self.profiles=dict()
-            plt.figure(figsize=(16,7),dpi=300)
+
             with h5py.File(self.filename, 'r') as f:
+                plt.figure(figsize=(16,7),dpi=300)
                 for zone_group in f.keys():
-                    for zone_dataset in f[zone_group].keys():
-                        dataset=f[zone_group][zone_dataset]
-                        x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
-                        y_axis=dataset[:]
-                        if np.mean(y_axis)> 0.1:
-                            plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
-                        else:
-                            plt.plot(x_axis,y_axis,lw=1)
+                    #first plot the energy stuff and save to file
+                    if zone_group != "frequency":
+                        for zone_dataset in f[zone_group].keys():
+                            dataset=f[zone_group][zone_dataset]
+                            x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
+                            y_axis=dataset[:]
+                            if np.mean(y_axis)> 0.1:
+                                plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
+                            else:
+                                plt.plot(x_axis,y_axis,lw=1)
                 if "events" in f:
                     for name_event,time_event in f["events"].attrs.items():
                         plt.axvline(x=time_event,color='r')
@@ -181,48 +250,28 @@ class AutoProfiler:
                 plt.legend()
                 plt.ylabel ("Power [W]")
                 plt.xlabel("Time [s]")
-                plt.savefig("results.png")
-    '''
-    def plot(self):
-        plot=self.time_dict.plot()
-        ax = plot.gca()
-        ax.set_xlim(0, self.time)
-        ax.set_ylabel("Power [W]")
-        ax.set_xlabel("Time [S]")
-        plot.refresh()        
-        plot.legend()        
+                plt.savefig("results_energy.png")
+                
+                #plot frequency stuff
+                plt.figure(figsize=(16,7),dpi=300)
+                for zone_group in f.keys():
+                    if zone_group == "frequency":
+                        for zone_dataset in f[zone_group].keys():
+                            dataset=f[zone_group][zone_dataset]
+                            x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
+                            y_axis=dataset[:]
+                            if np.std(y_axis)> 0.5:
+                                plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
+                            else:
+                                plt.plot(x_axis,y_axis,lw=1)
 
-    
-    def load_profile(self,filename):
-        self.time_dict=TimeSeriesDict.read(filename)
-        for serie in self.time_dict:
-            self.time=self.time_dict[serie].dt.value*len(self.time_dict[serie])
-            break
-        
-    def plot(self):
-        plot=self.time_dict.plot()
-        ax = plot.gca()
-        ax.set_xlim(0, self.time)
-        ax.set_ylabel("Power [W]")
-        ax.set_xlabel("Time [S]")
-        plot.refresh()        
-        plot.legend()
-    
-    def save(self,filename):
-        try:
-            time_dict=self.to_timedict()
-            time_dict.write(filename)
-        except:
-            print("Non possibile salvare")     
-            
-    @staticmethod
-    def metadata_apply(file_name,metadata):
-        with h5py.File(file_name, "a") as f:
-            try:
-                metadata_group=f.create_group("metadata")
-                for name,value in metadata.items():
-                    metadata_group.attrs[name]=value
-            except Exception as e:
-                print("Qualcosa di strano")
-                print(e)
-'''
+                if "events" in f:
+                    for name_event,time_event in f["events"].attrs.items():
+                        plt.axvline(x=time_event,color='r')
+                        plt.text(time_event, 40, name_event,rotation=90,verticalalignment='center')
+
+                plt.legend()
+                plt.ylabel ("Frequency GHz")
+                plt.xlabel("Time [s]")
+                plt.savefig("results_frequency.png")
+
