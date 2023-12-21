@@ -2,6 +2,7 @@ import numpy as np
 import time
 import h5py
 import os
+import math
 from subprocess import Popen, PIPE
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -170,15 +171,17 @@ class AutoProfiler:
         self.reset()
         t0=time.time_ns()
         process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
-        init_time=last_time=time.time_ns()
-        looptime=self.dtns#- 5052469
-        sleeptime=self.sleeptime/7000000
+        looptime=self.dtns # - 5052469
+        sleeptime=self.sleeptime/500
+        step=0
         while process.poll() is None:
             last_time=time.time_ns()
             self.cycle()
+            step+=1
             while (time.time_ns()-last_time < looptime):
                 time.sleep(sleeptime)
-                #qui ho finito di profilare
+
+        #qui ho finito di profilare
            
         stdoutput=process.stdout.read().decode()
         events=list()
@@ -197,7 +200,11 @@ class AutoProfiler:
         print(stdoutput)
         print(stderr)
         self.save(events=events,filename=self.filename)
-        print(f"Profiling time: {round((last_time-init_time)/(10**9),2)} [s]")
+        profiling_time_ns=last_time-t0
+        print(f"Profiling time: {round(profiling_time_ns/(10**9),2)} [s]")
+        expected_timestep=math.floor(profiling_time_ns/self.dtns)
+        print(f"Expected time step count {expected_timestep}")
+        print(f"Sampled time step count {step}")
         print("End profiling")
 
     def cycle(self):
@@ -253,9 +260,10 @@ class AutoProfiler:
                             else:
                                 plt.plot(x_axis,y_axis,lw=1)
                 if "events" in f:
+                    y_min,y_max = plt.gca().get_ylim()
                     for name_event,time_event in f["events"].attrs.items():
                         plt.axvline(x=time_event,color='r')
-                        plt.text(time_event, 40, name_event,rotation=90,verticalalignment='center')
+                        plt.text(time_event, (y_min+y_max)/2, name_event,rotation=90,verticalalignment='center')
 
                 plt.legend()
                 plt.ylabel ("Power [W]")
@@ -286,5 +294,5 @@ class AutoProfiler:
                 plt.ylabel ("Frequency GHz")
                 plt.xlabel("Time [s]")
                 plt.savefig(f"{basename}_frequency.png")
-                plt.savefig("results_frequency.png")
+
 
