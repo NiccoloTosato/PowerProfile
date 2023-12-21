@@ -217,6 +217,9 @@ class AutoProfiler:
         return s   
         
     def save(self,filename="default.hdf5",events=None):
+        '''
+        This function is a DRAFT
+        '''
         with h5py.File(filename, 'w') as f:
             for zone in self.powerzones:
                 data=np.array(zone.data)
@@ -237,6 +240,7 @@ class AutoProfiler:
             self.profiles=dict()
             with h5py.File(self.filename, 'r') as f:
                 plt.figure(figsize=(16,7),dpi=300)
+                plt.title(f"{basename} power")
                 for zone_group in f.keys():
                     #first plot the energy stuff and save to file
                     if zone_group != "frequency":
@@ -260,12 +264,14 @@ class AutoProfiler:
                 
                 #plot frequency stuff
                 plt.figure(figsize=(16,7),dpi=300)
+                plt.title(f"{basename} frequency")
                 for zone_group in f.keys():
                     if zone_group == "frequency":
                         for zone_dataset in f[zone_group].keys():
                             dataset=f[zone_group][zone_dataset]
                             x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
                             y_axis=dataset[:]
+
                             if np.std(y_axis)> 0.5:
                                 plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
                             else:
