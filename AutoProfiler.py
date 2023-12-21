@@ -4,7 +4,8 @@ import h5py
 import os
 from subprocess import Popen, PIPE
 import matplotlib.pyplot as plt
-from itertools import starmap
+from pathlib import Path
+
 class AutoFrequency:
     def __init__(self,path):
         self.path=path
@@ -35,14 +36,14 @@ class AutoFrequency:
     def read_name(self):
         try:
             file=open(f"{self.path}/affected_cpus",'r')
-            self.name="cpu0"+file.readline()
+            self.name="cpu"+file.readline().rstrip()
             file.close()
         except Exception as e:
             print(f"Errore apertura/lettura file {e}")
             raise
 
     def __repr__(self):
-        s=f"{self.name}\t{self.read_frequency()} freq"
+        s=f"{self.name}\t{round(self.read_frequency()/1E6,2)} GHz"
         return s
     
     def allocate(self):
@@ -57,6 +58,7 @@ class AutoFrequency:
         self.allocate()
 
     def read_frequency(self):
+        #This could be faster than reading a single line
         value=int(self.descriptor.readlines()[0])
         self.descriptor.seek(0)
         return value
@@ -169,17 +171,13 @@ class AutoProfiler:
         t0=time.time_ns()
         process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
         init_time=last_time=time.time_ns()
-        
         looptime=self.dtns#- 5052469
-        
         sleeptime=self.sleeptime/7000000
         while process.poll() is None:
             last_time=time.time_ns()
             self.cycle()
             while (time.time_ns()-last_time < looptime):
                 time.sleep(sleeptime)
-                #time.sleep(5052469/1E9)
-
                 #qui ho finito di profilare
            
         stdoutput=process.stdout.read().decode()
@@ -207,10 +205,6 @@ class AutoProfiler:
         _ = tuple(map(AutoFrequency.store_read,self.frequencyzones))
         #[i.store_read() for i in self.frequencyzones]
         #[i.store_read() for i in self.powerzones]
-#        for zone in self.powerzones:
-#            zone.store_read()
-#        for freq in self.frequencyzones:
-#            freq.store_read()
         
     def reset(self):
         for zone in self.powerzones:
@@ -239,8 +233,8 @@ class AutoProfiler:
 
     def plot_profile(self,filename=None):
         if self.filename is not None:
+            basename= Path(self.filename).stem
             self.profiles=dict()
-
             with h5py.File(self.filename, 'r') as f:
                 plt.figure(figsize=(16,7),dpi=300)
                 for zone_group in f.keys():
@@ -262,7 +256,7 @@ class AutoProfiler:
                 plt.legend()
                 plt.ylabel ("Power [W]")
                 plt.xlabel("Time [s]")
-                plt.savefig("results_energy.png")
+                plt.savefig(f"{basename}_energy.png")
                 
                 #plot frequency stuff
                 plt.figure(figsize=(16,7),dpi=300)
@@ -285,5 +279,6 @@ class AutoProfiler:
                 plt.legend()
                 plt.ylabel ("Frequency GHz")
                 plt.xlabel("Time [s]")
+                plt.savefig(f"{basename}_frequency.png")
                 plt.savefig("results_frequency.png")
 
