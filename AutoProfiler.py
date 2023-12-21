@@ -17,7 +17,8 @@ class AutoFrequency:
             print(f"Errore apertura file {path}")        
             pass
         self.allocate()
-        
+    def __len__(self):
+        return len(self.data)
     @staticmethod
     def autodetect():
         frequencyzones=list()
@@ -76,7 +77,8 @@ class AutoPowerZone:
             print("Errore apertura file")        
             pass
         self.allocate()
-    
+    def __len__(self):
+        return len(self.data)
     def open_file(self):
         try:
             if self.interface=='intel-rapl':
@@ -172,15 +174,15 @@ class AutoProfiler:
         t0=time.time_ns()
         process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
         looptime=self.dtns # - 5052469
-        sleeptime=self.sleeptime/500
-        step=0
+        sleeptime=self.sleeptime/1000
+        #step=0
         while process.poll() is None:
             last_time=time.time_ns()
             self.cycle()
-            step+=1
+            #step+=1
             while (time.time_ns()-last_time < looptime):
                 time.sleep(sleeptime)
-
+        #self.cycle()    
         #qui ho finito di profilare
            
         stdoutput=process.stdout.read().decode()
@@ -204,7 +206,7 @@ class AutoProfiler:
         print(f"Profiling time: {round(profiling_time_ns/(10**9),2)} [s]")
         expected_timestep=math.floor(profiling_time_ns/self.dtns)
         print(f"Expected time step count {expected_timestep}")
-        print(f"Sampled time step count {step}")
+        print(f"Sampled time step count {len(self.powerzones[0])}")
         print("End profiling")
 
     def cycle(self):
@@ -255,6 +257,7 @@ class AutoProfiler:
                             dataset=f[zone_group][zone_dataset]
                             x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
                             y_axis=dataset[:]
+                            dt=dataset.attrs['dt']
                             if np.mean(y_axis)> 0.1:
                                 plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
                             else:
@@ -279,7 +282,6 @@ class AutoProfiler:
                             dataset=f[zone_group][zone_dataset]
                             x_axis=dataset.attrs['dt']*np.arange(0,len(dataset))
                             y_axis=dataset[:]
-
                             if np.std(y_axis)> 0.5:
                                 plt.plot(x_axis,y_axis,label=f"{zone_group}/{zone_dataset}",lw=1)
                             else:
