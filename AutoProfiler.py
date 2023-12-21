@@ -1,13 +1,17 @@
-import numpy as np
 import time
 import h5py
 import os
 import math
-from subprocess import Popen, PIPE
+import numpy as np
 import matplotlib.pyplot as plt
+from subprocess import Popen, PIPE
 from pathlib import Path
 from AutoReader import AutoFrequency,AutoPowerZone
+from collections import deque
 
+def exhaust(generator):
+    deque(generator, maxlen=0)
+    
 class AutoProfiler:
     def __init__(self,powerzones=None, command=None,args=None, dt=0.1,filename="default.hdf5"):
         self.dt=dt
@@ -52,7 +56,6 @@ class AutoProfiler:
                 time.sleep(sleeptime)
         #self.cycle()    
         #qui ho finito di profilare
-           
         stdoutput=process.stdout.read().decode()
         events=list()
         print( time.get_clock_info("time"))
@@ -78,8 +81,8 @@ class AutoProfiler:
         print("End profiling")
 
     def cycle(self):
-        _ = tuple(map(AutoPowerZone.store_read,self.powerzones))
-        _ = tuple(map(AutoFrequency.store_read,self.frequencyzones))
+        exhaust(map(AutoPowerZone.store_read,self.powerzones))
+        exhaust(map(AutoFrequency.store_read,self.frequencyzones))
         #[i.store_read() for i in self.frequencyzones]
         #[i.store_read() for i in self.powerzones]
         
