@@ -4,7 +4,7 @@ import h5py
 import os
 from subprocess import Popen, PIPE
 import matplotlib.pyplot as plt
-
+from itertools import starmap
 class AutoFrequency:
     def __init__(self,path):
         self.path=path
@@ -50,14 +50,14 @@ class AutoFrequency:
         return
     
     def store_read(self):
-        self.data.append(self.read_frequency())
-        return
+        #self.data.append(0)
+        self.data+= self.read_frequency(),
 
     def reset(self):
         self.allocate()
 
     def read_frequency(self):
-        value=int(self.descriptor.readline())
+        value=int(self.descriptor.readlines()[0])
         self.descriptor.seek(0)
         return value
         
@@ -102,7 +102,7 @@ class AutoPowerZone:
             raise
             
     def read_energy(self):
-        value=int(self.descriptor.readline())
+        value=int(self.descriptor.readlines()[0])
         self.descriptor.seek(0)
         return value
     
@@ -115,8 +115,9 @@ class AutoPowerZone:
         return
     
     def store_read(self):
-        self.data.append(self.read_energy())
-        return
+        #self.data.append(0)
+        self.data+= self.read_energy(),
+        
     def reset(self):
         self.allocate()
             
@@ -157,7 +158,7 @@ class AutoProfiler:
             self.command=command
             self.args=args
             #How many time the process sleep between each cicle, higher the value, more precise is the measure
-            self.sleeptime=dt/20
+            self.sleeptime=dt
             self.time_dict=None
             print(f"Profiler command: {self.command}, args {self.args}, dt {self.dt}")
 
@@ -168,12 +169,19 @@ class AutoProfiler:
         t0=time.time_ns()
         process=Popen([self.command, *self.args.split(" ")], stdout=PIPE, stderr=PIPE)
         init_time=last_time=time.time_ns()
+        
+        looptime=self.dtns#- 5052469
+        
+        sleeptime=self.sleeptime/7000000
         while process.poll() is None:
-            self.cycle()
             last_time=time.time_ns()
-            while (time.time_ns()-last_time < self.dtns):
-                time.sleep(self.sleeptime)
-        #qui ho finito di profilare
+            self.cycle()
+            while (time.time_ns()-last_time < looptime):
+                time.sleep(sleeptime)
+                #time.sleep(5052469/1E9)
+
+                #qui ho finito di profilare
+           
         stdoutput=process.stdout.read().decode()
         events=list()
         print( time.get_clock_info("time"))
@@ -195,10 +203,14 @@ class AutoProfiler:
         print("End profiling")
 
     def cycle(self):
-        for zone in self.powerzones:
-            zone.store_read()
-        for freq in self.frequencyzones:
-            freq.store_read()
+        _ = tuple(map(AutoPowerZone.store_read,self.powerzones))
+        _ = tuple(map(AutoFrequency.store_read,self.frequencyzones))
+        #[i.store_read() for i in self.frequencyzones]
+        #[i.store_read() for i in self.powerzones]
+#        for zone in self.powerzones:
+#            zone.store_read()
+#        for freq in self.frequencyzones:
+#            freq.store_read()
         
     def reset(self):
         for zone in self.powerzones:
